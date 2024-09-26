@@ -18,16 +18,11 @@ package otelmetrics
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
-	otelprometheus "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -39,6 +34,8 @@ import (
 	"github.com/inspektor-gadget/inspektor-gadget/pkg/histogram"
 	"github.com/inspektor-gadget/inspektor-gadget/pkg/operators"
 	"github.com/inspektor-gadget/inspektor-gadget/pkg/params"
+
+	otelotlp "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 )
 
 const (
@@ -70,7 +67,8 @@ const (
 
 type otelMetricsOperator struct {
 	// exporter is the global exporter instance
-	exporter      *otelprometheus.Exporter
+	//exporter      *otelprometheus.Exporter
+	exporter      *otelotlp.Exporter
 	meterProvider metric.MeterProvider
 
 	// if skipListen is set to true, it will not expose the metrics using http
@@ -88,15 +86,51 @@ func (m *otelMetricsOperator) Init(globalParams *params.Params) error {
 	}
 
 	// create a global prometheus collector/exporter; this will be exposed using an HTTP endpoint, if activated
-	exporter, err := otelprometheus.New()
+	//exporter, err := otelprometheus.New()
+	//OTLP start
+	client := otlpmetricgrpc.NewClient(
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithEndpoint("your-ME-host-name:4317"),
+		//I might need WithGRPCConn()
+	)
+
+	exporter, err := otlpmetric.New(ctx, client, otlpmetricgrpc.WithMetricAggregationTemporalitySelector(aggregation.DeltaTemporalitySelector()))
 	if err != nil {
-		return fmt.Errorf("initializing otel metrics exporter: %w", err)
+		return fmt.Errorf("Failed to create an exporter due to error %s", err.Error())
 	}
+
+	//For multi tenant. For single tenant, just run a cmdline when installing Geneva Metrics Extension
+	// These fields need to set at the controller resource level as ME extensions
+	// reads them at this level, not at the metric instrumentation data level.
+	/* commonLabels := []attribute.KeyValue{
+	       attribute.String("_microsoft_metrics_account", me.AccountName),
+	       attribute.String("_microsoft_metrics_namespace", me.MetricNamespace),
+	   }
+	   res := resource.NewSchemaless(commonLabels...)
+
+	   // Create the metric controller/pusher
+	   pusher := controller.New(
+	       processor.NewFactory(
+	           simple.NewWithInexpensiveDistribution(),
+	           exp,
+	       ),
+	       controller.WithExporter(exp),
+	       controller.WithCollectPeriod(2*time.Second),
+	       controller.WithResource(res),
+	   ) */
+	//OTLP ends
+
+	//Exporter should be created using New and used with a metric.PeriodicReader.
 	m.exporter = exporter
-	m.meterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+	m.meterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(metric.NewPeriodicReader(exporter)))
+	defer func() {
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			panic(err)
+		}
+	}()
 
 	// Start HTTP listener for the global exporter
-	if !m.skipListen {
+	/* 	if !m.skipListen {
 		go func() {
 			mux := http.NewServeMux()
 			mux.Handle("/metrics", promhttp.Handler())
@@ -106,7 +140,7 @@ func (m *otelMetricsOperator) Init(globalParams *params.Params) error {
 				return
 			}
 		}()
-	}
+	} */
 	return nil
 }
 
@@ -192,12 +226,13 @@ func (m *otelMetricsOperatorInstance) Name() string {
 }
 
 type metricsCollector struct {
-	meter             metric.Meter
-	keys              []func(datasource.Data) attribute.KeyValue
-	values            []func(context.Context, datasource.Data, attribute.Set)
-	mappedName        string
-	output            bool
-	exporter          *otelprometheus.Exporter
+	meter      metric.Meter
+	keys       []func(datasource.Data) attribute.KeyValue
+	values     []func(context.Context, datasource.Data, attribute.Set)
+	mappedName string
+	output     bool
+	//exporter          *otelprometheus.Exporter
+	exporter          *otelotlp.Exporter
 	meterProvider     *sdkmetric.MeterProvider
 	useGlobalProvider bool
 }
@@ -592,13 +627,30 @@ func (m *otelMetricsOperatorInstance) PreStart(gadgetCtx operators.GadgetContext
 		} else {
 			// Initialize a local instance
 			gadgetCtx.Logger().Debugf("using local metric provider for collector %q", collector.mappedName)
-			registry := prometheus.NewRegistry()
+			/* registry := prometheus.NewRegistry()
 			exporter, err := otelprometheus.New(otelprometheus.WithRegisterer(registry))
 			if err != nil {
 				return fmt.Errorf("creating prometheus registry: %w", err)
+			} */
+			client := otlpmetricgrpc.NewClient(
+				otlpmetricgrpc.WithInsecure(),
+				otlpmetricgrpc.WithEndpoint("your-ME-host-name:4317"),
+				//I might need WithGRPCConn()
+			)
+
+			exporter, err := otlpmetric.New(ctx, client, otlpmetricgrpc.WithMetricAggregationTemporalitySelector(aggregation.DeltaTemporalitySelector()))
+			if err != nil {
+				return fmt.Errorf("Failed to create an exporter due to error %s", err.Error())
 			}
+
 			collector.exporter = exporter
-			collector.meterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+			//collector.meterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+			collector.meterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(metric.NewPeriodicReader(exporter)))
+			defer func() {
+				if err := meterProvider.Shutdown(ctx); err != nil {
+					panic(err)
+				}
+			}()
 			collector.meter = collector.meterProvider.Meter(collector.mappedName)
 		}
 
@@ -676,8 +728,8 @@ func (m *otelMetricsOperatorInstance) PrintMetrics(gadgetCtx operators.GadgetCon
 			return
 		case <-ticker.C:
 			// collect metrics
-			md := make(map[*otelprometheus.Exporter]*metricdata.ResourceMetrics)
-
+			//md := make(map[*otelprometheus.Exporter]*metricdata.ResourceMetrics)
+			md := make(map[*otelotlp.Exporter]*metricdata.ResourceMetrics)
 			var out strings.Builder
 			for _, collector := range m.collectors {
 				exporter := m.op.exporter
