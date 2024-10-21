@@ -262,16 +262,16 @@ func (m *otelMetricsOperator) InstantiateDataOperator(gadgetCtx operators.Gadget
 	}
 
 	// named metric providers are only evaluated on the server side for now
-	if gadgetCtx.IsRemoteCall() {
-		provider := params.Get(ParamOtelMetricsExporter).AsString()
-		if provider != "" {
-			p, ok := m.providers[provider]
-			if !ok {
-				return nil, fmt.Errorf("no metrics provider found with name %q", provider)
-			}
-			instance.provider = p
+	// if gadgetCtx.IsRemoteCall() {
+	provider := params.Get(ParamOtelMetricsExporter).AsString()
+	if provider != "" {
+		p, ok := m.providers[provider]
+		if !ok {
+			return nil, fmt.Errorf("no metrics provider found with name %q", provider)
 		}
+		instance.provider = p
 	}
+	// }
 
 	err = instance.init(gadgetCtx)
 	if err != nil {
