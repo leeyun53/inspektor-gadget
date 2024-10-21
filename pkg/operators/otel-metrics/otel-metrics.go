@@ -65,6 +65,9 @@ const (
 	AnnotationMetricsUnit        = "metrics.unit"
 	AnnotationMetricsBoundaries  = "metrics.boundaries"
 
+	AnnotationImplicitCounterName        = "metrics.implicit-counter.name"
+	AnnotationImplicitCounterDescription = "metrics.implicit-counter.description"
+
 	PrintDataSourceName = "renderedmetrics"
 	PrintFieldName      = "text"
 
@@ -713,6 +716,22 @@ func (m *otelMetricsOperatorInstance) PreStart(gadgetCtx operators.GadgetContext
 		}
 
 		hasValueFields := false
+
+		// Support an implicit counter
+		if implicitCounter := ds.Annotations()[AnnotationImplicitCounterName]; implicitCounter != "" {
+			tOptions := make([]metric.Int64CounterOption, 0)
+			if implicitCounterDescription := ds.Annotations()[AnnotationImplicitCounterDescription]; implicitCounterDescription != "" {
+				tOptions = append(tOptions, metric.WithDescription(implicitCounterDescription))
+			}
+			ctr, err := collector.meter.Int64Counter(implicitCounter, tOptions...)
+			if err != nil {
+				return fmt.Errorf("adding implicit counter %q: %w", implicitCounter, err)
+			}
+			collector.values = append(collector.values, func(ctx context.Context, data datasource.Data, set attribute.Set) {
+				ctr.Add(ctx, 1, metric.WithAttributeSet(set))
+			})
+			hasValueFields = true
+		}
 
 		fields := ds.Accessors(false)
 		for _, f := range fields {
