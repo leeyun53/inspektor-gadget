@@ -15,35 +15,10 @@ UNIT_TEST_DIR = test/unit
 INTEGRATION_TEST_DIR = test/integration
 
 GADGETS = \
-	audit_seccomp \
-	deadlock \
-	fsnotify \
 	profile_blockio \
-	profile_tcprtt \
-	trace_bind \
-	trace_capabilities \
-	trace_dns \
-	trace_exec \
-	trace_fsslower \
-	trace_lsm \
-	trace_malloc \
-	trace_mount \
-	trace_oomkill \
 	trace_open \
-	trace_signal \
-	trace_sni \
-	trace_ssl \
-	trace_tcp \
-	trace_tcpconnect \
-	trace_tcpdrop \
-	trace_tcpretrans \
-	top_blockio \
 	top_file \
-	top_tcp \
-	snapshot_process \
-	snapshot_socket \
-	ci/inner_fields \
-	ci/sched_cls_drop \
+
 	#
 
 DATE=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")

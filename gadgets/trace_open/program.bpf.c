@@ -14,6 +14,7 @@
 #define TASK_RUNNING 0
 #define NAME_MAX 255
 #define INVALID_UID ((uid_t)-1)
+#define MAX_ENTRIES 10240
 
 struct args_t {
 	const char *fname;
@@ -43,10 +44,12 @@ const volatile pid_t targ_pid = 0;
 const volatile pid_t targ_tgid = 0;
 const volatile uid_t targ_uid = INVALID_UID;
 const volatile bool targ_failed = false;
+const volatile bool targ_yun = false;
 
 GADGET_PARAM(targ_tgid);
 GADGET_PARAM(targ_uid);
 GADGET_PARAM(targ_failed);
+GADGET_PARAM(targ_yun)
 
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
@@ -55,9 +58,26 @@ struct {
 	__type(value, struct args_t);
 } start SEC(".maps");
 
-GADGET_TRACER_MAP(events, 1024 * 256);
+struct metrics_key {
+    __u32 pid;
+};
 
-GADGET_TRACER(open, events, event);
+struct metrics_value {
+    gadget_counter__u32 counter;
+};
+
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, struct metrics_key);
+    __type(value, struct metrics_value);
+} metrics SEC(".maps");
+
+GADGET_MAPITER(testmetrics, metrics);
+
+// GADGET_TRACER_MAP(events, 1024 * 256);
+
+// GADGET_TRACER(open, events, event);
 
 static __always_inline bool valid_uid(uid_t uid)
 {
@@ -96,6 +116,7 @@ static __always_inline int trace_enter(const char *filename, int flags,
 	/* use kernel terminology here for tgid/pid: */
 	u32 tgid = id >> 32;
 	u32 pid = id;
+	u32 key = id;
 
 	/* store arg info for later lookup */
 	if (trace_allowed(tgid, pid)) {
@@ -104,6 +125,7 @@ static __always_inline int trace_enter(const char *filename, int flags,
 		args.flags = flags;
 		args.mode = mode;
 		bpf_map_update_elem(&start, &pid, &args, 0);
+		bpf_map_update_elem(&metrics, &key, 0, BPF_NOEXIST);
 	}
 	return 0;
 }
@@ -128,6 +150,7 @@ static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 {
 	struct event *event;
 	struct args_t *ap;
+	struct metrics_value *ap1;
 	long int ret;
 	__u32 fd;
 	__s32 errval;
@@ -138,15 +161,17 @@ static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 	u32 pid = (u32)pid_tgid;
 
 	ap = bpf_map_lookup_elem(&start, &pid);
+	ap1 = bpf_map_lookup_elem(&metrics, &pid);
 	if (!ap)
 		return 0; /* missed entry */
+	if (!ap1)
+		return 0;
 	ret = ctx->ret;
 	if (targ_failed && ret >= 0)
 		goto cleanup; /* want failed only */
-
-	event = gadget_reserve_buf(&events, sizeof(*event));
-	if (!event)
-		goto cleanup;
+	//event = gadget_reserve_buf(&events, sizeof(*event));
+	//if (!event)
+	//	goto cleanup;
 
 	fd = 0;
 	errval = 0;
@@ -155,9 +180,11 @@ static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 	} else {
 		errval = -ret;
 	}
-
+	if (targ_yun) {
+		ap1->counter++;
+	}
 	/* event data */
-	event->pid = pid_tgid >> 32;
+/* 	event->pid = pid_tgid >> 32;
 	event->tid = (__u32)pid_tgid;
 	event->uid = (u32)uid_gid;
 	event->gid = (u32)(uid_gid >> 32);
@@ -168,13 +195,14 @@ static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 	event->error_raw = errval;
 	event->fd = fd;
 	event->mntns_id = gadget_get_mntns_id();
-	event->timestamp_raw = bpf_ktime_get_boot_ns();
+	event->timestamp_raw = bpf_ktime_get_boot_ns(); */
 
 	/* emit event */
-	gadget_submit_buf(ctx, &events, event, sizeof(*event));
+	// gadget_submit_buf(ctx, &events, event, sizeof(*event));
 
 cleanup:
 	bpf_map_delete_elem(&start, &pid);
+	bpf_map_delete_elem(&metrics, &pid);
 	return 0;
 }
 
