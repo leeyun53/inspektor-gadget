@@ -34,7 +34,7 @@ struct event {
 	gadget_gid gid;
 
 	gadget_errno error_raw;
-	__u32 fd;
+	//__u32 fd;
 	int flags_raw;
 	__u16 mode_raw;
 	char fname[NAME_MAX];
@@ -73,7 +73,7 @@ struct {
     __type(value, struct metrics_value);
 } metrics SEC(".maps");
 
-GADGET_MAPITER(testmetrics, metrics);
+GADGET_MAPITER(open, metrics);
 
 // GADGET_TRACER_MAP(events, 1024 * 256);
 
@@ -148,14 +148,14 @@ int ig_openat_e(struct syscall_trace_enter *ctx)
 
 static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 {
-	struct event *event;
+	//struct event *event;
 	struct args_t *ap;
 	struct metrics_value *ap1;
 	long int ret;
-	__u32 fd;
-	__s32 errval;
+	//__u32 fd;
+	//__s32 errval;
 	__u64 pid_tgid = bpf_get_current_pid_tgid();
-	__u64 uid_gid = bpf_get_current_uid_gid();
+	//__u64 uid_gid = bpf_get_current_uid_gid();
 
 	// pid from kernel po
 	u32 pid = (u32)pid_tgid;
@@ -173,13 +173,13 @@ static __always_inline int trace_exit(struct syscall_trace_exit *ctx)
 	//if (!event)
 	//	goto cleanup;
 
-	fd = 0;
-	errval = 0;
+	/* fd = 0;
+	//errval = 0;
 	if (ret >= 0) {
 		fd = ret;
 	} else {
 		errval = -ret;
-	}
+	} */
 	if (targ_yun) {
 		ap1->counter++;
 	}

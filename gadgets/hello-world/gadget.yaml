@@ -1,0 +1,28 @@
+name: mygadget
+description: Example gadget
+homepageURL: http://mygadget.com
+documentationURL: https://mygadget.com/docs
+sourceURL: https://github.com/my-org/mygadget/
+datasources:
+  metrics:
+    annotations:
+      metrics.collect: true
+    fields:
+      counter:
+        annotations:
+          description: counter for every 60s
+          columns.hidden: false
+  open:
+    fields:
+      comm:
+        annotations:
+          description: Name of the process opening a file
+          template: comm
+      filename:
+        annotations:
+           description: Path of the file being opened
+           columns.width: 64
+      pid:
+        annotations:
+          description: PID of the process opening a file
+          template: pid
