@@ -5,6 +5,10 @@ documentationURL: https://www.inspektor-gadget.io/docs/latest/gadgets/trace_open
 sourceURL: https://github.com/inspektor-gadget/inspektor-gadget/tree/main/gadgets/trace_open
 datasources:
   open:
+    annotations:
+      logs.name: trace_open
+      logs.severity: 21
+      logs.body: fname
     fields:
       flags_raw:
         annotations:
