@@ -280,7 +280,6 @@ static int probe_ip(bool receiving, struct sock *sk, size_t size)
 		} else {
 			zero.sent_pkts = 1;
 		}
-		zero.dropped_pkts = 0;
 		//bpf_map_update_elem(&ip_map, &ip_key, &zero, BPF_NOEXIST);
 		bpf_map_update_elem(&ip_map2, &ip_key2, &zero, BPF_NOEXIST);
 	} else {
