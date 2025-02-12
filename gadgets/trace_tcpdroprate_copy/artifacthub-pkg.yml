@@ -1,0 +1,29 @@
+# Artifact Hub package metadata file
+version: 0.35.0
+name: "trace tcpdroprate"
+category: monitoring-logging
+displayName: "trace tcpdroprate"
+createdAt: "2024-12-02T10:15:22Z"
+digest: "2024-12-02T10:15:22Z"
+description: "trace TCP packets drop rate by the kernel"
+logoURL: "https://inspektor-gadget.io/media/brand-icon.svg"
+license: ""
+homeURL: "https://inspektor-gadget.io/docs/latest/gadgets/trace_tcpdroprate"
+containersImages:
+    - name: gadget
+      image: "ghcr.io/inspektor-gadget/gadget/trace_tcpdroprate:latest"
+      platforms:
+        - linux/amd64
+        - linux/arm64
+keywords:
+    - gadget
+links:
+    - name: source
+      url: "https://github.com/inspektor-gadget/inspektor-gadget/tree/main/gadgets/trace_tcpdroprate"
+install: |
+    # Run
+    ```bash
+    sudo ig run ghcr.io/inspektor-gadget/gadget/trace_tcpdroprate:latest
+    ```
+provider:
+    name: Inspektor Gadget

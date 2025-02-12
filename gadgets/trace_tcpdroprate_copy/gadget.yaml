@@ -1,0 +1,23 @@
+name: trace tcpdroprate copy
+description: trace TCP packets dropped by the kernel
+homepageURL: https://inspektor-gadget.io/
+documentationURL: https://www.inspektor-gadget.io/docs/latest/gadgets/trace_tcpdroprate
+sourceURL: https://github.com/inspektor-gadget/inspektor-gadget/tree/main/gadgets/trace_tcpdroprate
+datasources:
+  tcpdroprate:
+    fields:
+      src:
+        annotations:
+          template: l4endpoint
+      dst:
+        annotations:
+          template: l4endpoint
+      received:
+        annotations:
+          description: Received bytes
+      received_count:
+        annotations:
+          description: Received packet count
+      dropped_count:
+        annotations:
+          description: Dropped bytes count

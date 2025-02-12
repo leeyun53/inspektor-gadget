@@ -192,6 +192,8 @@ func (o *otelLogsOperatorInstance) init(gadgetCtx operators.GadgetContext) error
 
 		gadgetCtx.Logger().Debugf("logging %q to exporter %q", ds.Name(), exporterName)
 		o.loggers[ds] = exporter.Logger(loggerName)
+		log.Info("GADGET LOGGER NAME %q", loggerName);
+
 	}
 	return nil
 }
