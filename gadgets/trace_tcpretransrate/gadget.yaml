@@ -1,0 +1,43 @@
+name: trace tcpretrans
+description: trace TCP retransmissions
+homepageURL: https://inspektor-gadget.io/
+documentationURL: https://www.inspektor-gadget.io/docs/latest/gadgets/trace_tcpretrans
+sourceURL: https://github.com/inspektor-gadget/inspektor-gadget/tree/main/gadgets/trace_tcpretrans
+datasources:
+  tcpretransrate:
+    fields:
+      src:
+        annotations:
+          template: l4endpoint
+      dst:
+        annotations:
+          template: l4endpoint
+      tcpflags_raw:
+        annotations:
+          columns.hidden: true
+      tcpflags:
+        annotations:
+          description: TCP flags from a TCP header
+          columns.hidden: true
+      reason_raw:
+        annotations:
+          columns.hidden: true
+      reason:
+        annotations:
+          description: Reason for retransmission
+          columns.hidden: true
+      type_raw:
+        annotations:
+          columns.hidden: true
+      type:
+        annotations:
+          description: Type of the retransmission, either RETRANS or LOSS
+          columns.width: 10
+      state:
+        annotations:
+          description: Connection state
+          columns.hidden: true
+      retrans_segs:
+        annotations:
+          description: Number of retransmitted segments
+          columns.width: 10
